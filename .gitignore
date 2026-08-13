@@ -213,6 +213,9 @@ tempCodeRunnerFile.py
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+kiwi_engine.py
+fetch_kiwi.py
+kma_key.txt
 
 # Streamlit
 .streamlit/secrets.toml
