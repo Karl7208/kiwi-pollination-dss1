@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>골드키위 수분 여건 — 전국</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Dodum&family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap');
+:root{--kiwi:#7CB342;--kiwi-deep:#558B2F;--ink:#1F2A1C;--paper:#F6F8F2;--card:#FFF;--line:#DDE5D2;--muted:#77836E;
+--g0:#3C8A5A;--g1:#9CCB7A;--g2:#E0952B;--g3:#C0392B}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'IBM Plex Sans KR',sans-serif;background:var(--paper);color:var(--ink);line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px 60px}
+header{padding:22px 0 14px;border-bottom:3px solid var(--ink);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+h1{font-family:'Black Han Sans';font-size:clamp(20px,3.6vw,29px)}
+h1 em{font-style:normal;color:var(--kiwi-deep)}
+header a{font-size:12.5px;color:var(--muted);text-decoration:none;font-weight:700}
+.ctl{display:flex;gap:8px;margin-left:auto;align-items:center;flex-wrap:wrap}
+.ctl select{padding:7px 10px;border:1px solid var(--line);border-radius:9px;font-family:inherit;font-size:13px;background:#fff;font-weight:700}
+.lang{border:1px solid var(--ink);border-radius:9px;overflow:hidden;display:flex}
+.lang button{border:none;background:#fff;padding:7px 11px;font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
+.lang button.on{background:var(--ink);color:#fff}
+.note{font-size:12px;color:var(--muted);margin-top:10px;font-family:'Gowun Dodum'}
+.cols{display:grid;grid-template-columns:1fr 1.1fr;gap:16px;margin-top:14px}
+@media(max-width:900px){.cols{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.panel h2{font-size:13px;font-weight:700;color:var(--muted);padding:13px 16px 0}
+#map{height:470px;margin-top:10px;border-top:1px solid var(--line)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{position:sticky;top:0;background:#EDF3E3;text-align:left;padding:8px 10px;cursor:pointer;font-size:12px;white-space:nowrap}
+td{padding:7px 10px;border-top:1px solid var(--line);white-space:nowrap}
+tr:hover td{background:var(--paper)}
+.tbwrap{max-height:470px;overflow:auto;margin-top:8px}
+.badge{display:inline-block;padding:2px 9px;border-radius:11px;color:#fff;font-weight:700;font-size:11.5px}
+.legend{display:flex;gap:12px;font-size:12px;color:var(--muted);padding:10px 16px;flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px}
+footer{margin-top:26px;padding-top:12px;border-top:1px solid var(--line);font-size:11.5px;color:var(--muted);font-family:'Gowun Dodum'}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <a href="index.html" id="back"></a>
+  <h1 id="ttl"></h1>
+  <div class="ctl">
+    <select id="bloomSel"></select>
+    <select id="yearSel"></select>
+    <select id="stratSel"></select>
+    <div class="lang">
+      <button id="btnKo" onclick="setLang('ko')">한국어</button>
+      <button id="btnEn" onclick="setLang('en')">EN</button>
+    </div>
+  </div>
+</header>
+<div class="note" id="note"></div>
+
+<div class="cols">
+  <div class="panel"><h2 id="hMap"></h2><div id="map"></div>
+    <div class="legend" id="lg"></div></div>
+  <div class="panel">
+    <h2 id="hTbl"></h2>
+    <div class="tbwrap"><table>
+      <thead><tr><th data-k="name"></th><th data-k="ipp"></th>
+      <th data-k="grade"></th><th data-k="tmin"></th></tr></thead>
+      <tbody id="tb"></tbody></table></div>
+  </div>
+</div>
+<footer id="foot"></footer>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const REPO='https://raw.githubusercontent.com/Karl7208/kiwi-pollination-dss1/main/docs';
+const Y0=1990,Y1=2026;
+const GC={'양호':'#3C8A5A','주의':'#9CCB7A','경계':'#E0952B','불량':'#C0392B'};
+const GORD={'양호':3,'주의':2,'경계':1,'불량':0};
+const S={
+ko:{back:'← 주산지판',ttl:'골드키위 수분 여건 <em>전국 지도</em>',
+ hMap:'선택 전략의 IPP 등급 분포',hTbl:'지점 목록 (열 클릭 = 정렬)',
+ thName:'지점',thIpp:'IPP',thGr:'등급',thTmin:'월동 참고',
+ gr:{'양호':'양호','주의':'주의','경계':'경계','불량':'불량'},
+ st:{BT:'꿀벌 단독',BTD:'꿀벌+부착기',AP:'인공수분(냉동)',PT_AP:'신선화분 AP',BTD_AP:'이중경로'},
+ note:'수분·생육기 적합도 지도입니다 — 월동 생존은 별도 문제이므로, 확장 검토 시 겨울 최저기온(표의 월동 참고)을 함께 보세요.',
+ wint:'주의',foot:'연구 시제품 · 게재 전 모델 — 결과값만 표시 · IPP는 수분·생육기 여건이며 월동 가능성을 포함하지 않음'},
+en:{back:'← Belt view',ttl:'Gold Kiwifruit Pollination <em>National Map</em>',
+ hMap:'IPP grade for the selected strategy',hTbl:'Stations (click header to sort)',
+ thName:'Station',thIpp:'IPP',thGr:'Grade',thTmin:'Winter ref.',
+ gr:{'양호':'Good','주의':'Caution','경계':'Alert','불량':'Poor'},
+ st:{BT:'Bees only',BTD:'Bees+dispenser',AP:'AP (frozen)',PT_AP:'AP (fresh)',BTD_AP:'Dual path'},
+ note:'This maps pollination/growing-season suitability — overwintering survival is a separate constraint; check winter minimum temperature (table) before considering expansion.',
+ wint:'risk',foot:'Research prototype · pre-publication model — outputs only · IPP covers pollination/growth conditions and does not include winter survival'}};
+let LANG='ko',YEAR='2026',BLOOM='05-15',STRAT='BTD',ROWS=[],map,layer,SORT={k:'ipp',dir:-1};
+
+function t(k){return S[LANG][k];}
+async function getJSON(rel){
+  try{let r=await fetch(rel,{cache:'no-store'});if(r.ok)return await r.json();}catch(e){}
+  return await (await fetch(REPO+'/'+rel,{cache:'no-store'})).json();
+}
+function setLang(l){LANG=l;const u=new URL(location);u.searchParams.set('lang',l);
+  history.replaceState(null,'',u);paintStatic();render();}
+function paintStatic(){
+  document.getElementById('back').textContent=t('back');
+  document.getElementById('back').href='index.html'+(LANG==='en'?'?lang=en':'');
+  document.getElementById('ttl').innerHTML=t('ttl');
+  document.getElementById('hMap').textContent=t('hMap');
+  document.getElementById('hTbl').textContent=t('hTbl');
+  document.getElementById('note').textContent=t('note');
+  document.getElementById('foot').textContent=t('foot');
+  const th=document.querySelectorAll('th');
+  ['thName','thIpp','thGr','thTmin'].forEach((k,i)=>th[i].textContent=t(k));
+  document.getElementById('btnKo').classList.toggle('on',LANG==='ko');
+  document.getElementById('btnEn').classList.toggle('on',LANG==='en');
+  const st=document.getElementById('stratSel');
+  [...st.options].forEach(o=>o.textContent=S[LANG].st[o.value]);
+  document.getElementById('lg').innerHTML=
+    Object.entries(S[LANG].gr).map(([k,v])=>`<span><i style="background:${GC[k]}"></i>${v}</span>`).join('');
+}
+async function load(){
+  let d;
+  try{d=await getJSON(`data_kiwi_${YEAR}.json`);}catch(e){ROWS=[];render();return;}
+  ROWS=[];
+  for(const[stn,v]of Object.entries(d.stations||{})){
+    const b=v.bloom[BLOOM];if(!b)continue;
+    const s=b.strategies[STRAT];if(!s)continue;
+    ROWS.push({stn,name:v.name,lat:v.lat,lon:v.lon,ipp:s.ipp,grade:s.grade});
+  }
+  render();
+}
+function initMap(){
+  map=L.map('map').setView([35.6,127.6],7);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    {attribution:'© OpenStreetMap'}).addTo(map);
+  layer=L.layerGroup().addTo(map);
+}
+function render(){
+  const rows=[...ROWS].sort((a,b)=>{
+    const k=SORT.k,x=a[k]??-1,y=b[k]??-1;
+    const xv=k==='grade'?GORD[x]:x, yv=k==='grade'?GORD[y]:y;
+    return (xv>yv?1:xv<yv?-1:0)*SORT.dir*(k==='name'?-1:1);});
+  document.getElementById('tb').innerHTML=rows.map(r=>`
+    <tr><td>${r.name}</td><td><b>${r.ipp.toLocaleString()}</b></td>
+    <td><span class="badge" style="background:${GC[r.grade]}">${S[LANG].gr[r.grade]}</span></td>
+    <td style="color:var(--muted)">—</td></tr>`).join('');
+  layer.clearLayers();
+  rows.forEach(r=>{if(r.lat==null)return;
+    L.circleMarker([r.lat,r.lon],{radius:6.5,color:'#fff',weight:1.2,
+      fillColor:GC[r.grade],fillOpacity:.92})
+      .bindTooltip(`${r.name} · ${r.ipp.toLocaleString()} (${S[LANG].gr[r.grade]})`).addTo(layer);});
+}
+(function boot(){
+  const u=new URL(location);
+  LANG=u.searchParams.get('lang')==='en'?'en':'ko';
+  const bs=document.getElementById('bloomSel');
+  bs.innerHTML=Array.from({length:31},(_,i)=>{const dd=String(i+1).padStart(2,'0');
+    return `<option value="05-${dd}">5/${i+1}</option>`;}).join('');
+  BLOOM=u.searchParams.get('b')||'05-15';bs.value=BLOOM;
+  const ys=document.getElementById('yearSel');
+  const o=[];for(let y=Y1;y>=Y0;y--)o.push(`<option value="${y}">${y}</option>`);
+  ys.innerHTML=o.join('');YEAR=u.searchParams.get('y')||'2026';ys.value=YEAR;
+  const st=document.getElementById('stratSel');
+  st.innerHTML=['BTD','BT','AP','PT_AP','BTD_AP'].map(k=>`<option value="${k}">${k}</option>`).join('');
+  STRAT=u.searchParams.get('s')||'BTD';st.value=STRAT;
+  const sync=()=>{const uu=new URL(location);
+    uu.searchParams.set('b',BLOOM);uu.searchParams.set('y',YEAR);uu.searchParams.set('s',STRAT);
+    history.replaceState(null,'',uu);};
+  bs.onchange=()=>{BLOOM=bs.value;sync();load();};
+  ys.onchange=()=>{YEAR=ys.value;sync();load();};
+  st.onchange=()=>{STRAT=st.value;sync();load();};
+  document.querySelectorAll('th').forEach(th=>th.onclick=()=>{
+    const k=th.dataset.k;if(!k)return;SORT.dir=SORT.k===k?-SORT.dir:-1;SORT.k=k;render();});
+  paintStatic();initMap();load();
+})();
+</script>
+</body>
+</html>

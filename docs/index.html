@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>골드키위 수분 의사결정 — 주산지</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Dodum&family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap');
+:root{--kiwi:#7CB342;--kiwi-deep:#558B2F;--gold:#C9A227;--ink:#1F2A1C;--paper:#F6F8F2;--card:#FFF;--line:#DDE5D2;--muted:#77836E;
+--g0:#3C8A5A;--g1:#9CCB7A;--g2:#E0952B;--g3:#C0392B}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'IBM Plex Sans KR',sans-serif;background:var(--paper);color:var(--ink);line-height:1.5}
+.wrap{max-width:1020px;margin:0 auto;padding:0 16px 70px}
+header{padding:24px 0 14px;border-bottom:3px solid var(--ink)}
+.topbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.topbar a{font-size:12.5px;color:var(--muted);text-decoration:none;font-weight:700}
+.lang{border:1px solid var(--ink);border-radius:8px;overflow:hidden;display:flex;margin-left:auto}
+.lang button{border:none;background:#fff;padding:6px 10px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.lang button.on{background:var(--ink);color:#fff}
+h1{font-family:'Black Han Sans';font-size:clamp(23px,4.6vw,34px)}
+h1 em{font-style:normal;color:var(--kiwi-deep)}
+header p{font-family:'Gowun Dodum';color:var(--muted);font-size:13.5px;margin-top:4px}
+.sel{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.sel label{font-size:11.5px;font-weight:700;color:var(--muted);display:block;margin-bottom:3px}
+.sel select{padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-family:inherit;font-size:14px;background:#fff;font-weight:700;min-width:110px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-top:16px;padding:16px 18px}
+.panel h2{font-size:13px;font-weight:700;color:var(--muted);margin-bottom:10px}
+.ctx{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin-top:-4px;margin-bottom:8px}
+.ctx b{color:var(--ink)}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{background:#EDF3E3;text-align:left;padding:9px 10px;font-size:12px;white-space:nowrap}
+td{padding:9px 10px;border-top:1px solid var(--line)}
+.badge{display:inline-block;padding:3px 10px;border-radius:12px;color:#fff;font-weight:700;font-size:12.5px}
+.best td{background:#F4F9EC}
+.ipp{font-family:'Black Han Sans';font-size:17px}
+.cal{display:grid;grid-template-columns:repeat(14,1fr);gap:4px;margin-top:4px}
+.cal .c{aspect-ratio:1;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:700}
+.legend{display:flex;gap:12px;font-size:11.5px;color:var(--muted);margin-top:8px;flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px}
+.band{display:grid;grid-auto-flow:column;gap:3px;margin-top:6px;overflow-x:auto;padding-bottom:4px}
+.band .y{min-width:26px;text-align:center}
+.band .y .bx{height:34px;border-radius:5px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10.5px;font-weight:700}
+.band .y .yr{font-size:9.5px;color:var(--muted);margin-top:2px}
+footer{margin-top:30px;padding-top:12px;border-top:1px solid var(--line);font-size:11.5px;color:var(--muted);font-family:'Gowun Dodum';line-height:1.65}
+.err{padding:30px;text-align:center;color:var(--muted);font-family:'Gowun Dodum'}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="topbar">
+    <a href="national.html" id="goNat"></a>
+    <div class="lang">
+      <button id="btnKo" onclick="setLang('ko')">한국어</button>
+      <button id="btnEn" onclick="setLang('en')">EN</button>
+    </div>
+  </div>
+  <h1 id="ttl"></h1>
+  <p id="sub"></p>
+</header>
+
+<div class="sel">
+  <div><label id="lStn"></label><select id="stnSel"></select></div>
+  <div><label id="lBloom"></label><select id="bloomSel"></select></div>
+  <div><label id="lYear"></label><select id="yearSel"></select></div>
+</div>
+
+<div class="panel">
+  <h2 id="hStrat"></h2>
+  <div class="ctx" id="ctx"></div>
+  <div id="stratTbl"></div>
+</div>
+
+<div class="panel">
+  <h2 id="hCal"></h2>
+  <div class="cal" id="cal"></div>
+  <div class="legend" id="lgCal"></div>
+</div>
+
+<div class="panel">
+  <h2 id="hBand"></h2>
+  <div class="band" id="band"></div>
+  <div class="legend" id="lgBand"></div>
+</div>
+
+<footer id="foot"></footer>
+</div>
+
+<script>
+const REPO='https://raw.githubusercontent.com/Karl7208/kiwi-pollination-dss1/main/docs';
+const Y0=1990,Y1=2026;
+const GC={'양호':'var(--g0)','주의':'var(--g1)','경계':'var(--g2)','불량':'var(--g3)'};
+const SIGC={GREEN:'#3C8A5A',YELLOW:'#D9B324',ORANGE:'#E0762B',RED:'#C0392B',GRAY:'#B9C0B2'};
+const S={
+ko:{nat:'전국판 →',ttl:'골드키위 <em>수분 의사결정</em>',
+ sub:'개화기 기상으로 다섯 가지 수분 전략의 결실 잠재력(IPP)을 등급화합니다 — 해금 품종, 주산지 기준',
+ lStn:'지점',lBloom:'개화 시작일',lYear:'연도',
+ hStrat:'수분 전략별 진단',hCal:'개화창 14일 · 일별 벌 활동 신호',
+ hBand:'연도별 궤적 (BTD 기준 등급 · 같은 지점·개화일)',
+ thS:'전략',thI:'IPP (예측 종자수)',thG:'등급',thW:'예상 과중',thA:'권장 조치',
+ ctx:(k,g)=>`세포분열기(KCDI) <b>${k}</b> · 비대기(KGMI) <b>${g}</b>`,
+ st:{BT:'꿀벌 단독',BTD:'꿀벌+꽃가루부착기',AP:'인공수분(냉동)',
+     PT_AP:'신선화분 인공수분',BTD_AP:'부착기+인공수분(이중)'},
+ gr:{'양호':'양호','주의':'주의','경계':'경계','불량':'불량'},
+ act:{'양호':'현 체계 유지','주의':'부착기 화분 점검·보강','경계':'신선화분 병용 검토','불량':'이중경로 총력'},
+ sig:{GREEN:'활동 적합',YELLOW:'보통',ORANGE:'강우 저해',RED:'저온 저해',GRAY:'결측'},
+ noData:'해당 연도 자료가 없습니다 (아카이브 업로드 필요)',
+ foot:'연구 시제품 · 학위논문 기반 IPP 체계 (게재 전 — 결과값만 표시) · 기상: 기상청 ASOS · 신호 정확도: 완도 93.4% / 보성 97.7% (현장 검증) · 실제 재배 의사결정은 지역 농업기술 기관과 상의하세요'},
+en:{nat:'National view →',ttl:'Gold Kiwifruit <em>Pollination DSS</em>',
+ sub:'Grades the fruit-set potential (IPP) of five pollination strategies from bloom-period weather — cv. Haegeum, main production belt',
+ lStn:'Site',lBloom:'Bloom start',lYear:'Year',
+ hStrat:'Strategy diagnosis',hCal:'14-day bloom window · daily bee-activity signal',
+ hBand:'Year-by-year trajectory (BTD grade · same site & bloom date)',
+ thS:'Strategy',thI:'IPP (pred. seeds)',thG:'Grade',thW:'Pred. weight',thA:'Recommended action',
+ ctx:(k,g)=>`Cell-division index (KCDI) <b>${k}</b> · Growth index (KGMI) <b>${g}</b>`,
+ st:{BT:'Bees only',BTD:'Bees + pollen dispenser',AP:'Artificial (frozen pollen)',
+     PT_AP:'Artificial (fresh pollen)',BTD_AP:'Dispenser + AP (dual path)'},
+ gr:{'양호':'Good','주의':'Caution','경계':'Alert','불량':'Poor'},
+ act:{'양호':'Maintain current system','주의':'Check & refill dispenser pollen','경계':'Consider fresh-pollen AP','불량':'Full dual-path (BTD+AP)'},
+ sig:{GREEN:'Favorable',YELLOW:'Fair',ORANGE:'Rain-limited',RED:'Cold-limited',GRAY:'No data'},
+ noData:'No archive for this year yet',
+ foot:'Research prototype · IPP framework from doctoral research (pre-publication — outputs only) · Weather: KMA ASOS · Signal accuracy: 93.4% (Wando) / 97.7% (Boseong), field-validated · Consult your local extension service for actual decisions'}};
+let LANG='ko',YEAR='2026',STN=null,BLOOM='05-15',CACHE={},TREND=null;
+
+function t(k){return S[LANG][k];}
+async function getJSON(rel){
+  try{let r=await fetch(rel,{cache:'no-store'});if(r.ok)return await r.json();}catch(e){}
+  return await (await fetch(REPO+'/'+rel,{cache:'no-store'})).json();
+}
+async function yearData(y){
+  if(CACHE[y]!==undefined)return CACHE[y];
+  try{CACHE[y]=await getJSON(`data_kiwi_${y}.json`);}catch(e){CACHE[y]=null;}
+  return CACHE[y];
+}
+function setLang(l){LANG=l;const u=new URL(location);u.searchParams.set('lang',l);
+  history.replaceState(null,'',u);paintStatic();paint();}
+function paintStatic(){
+  document.getElementById('goNat').textContent=t('nat');
+  document.getElementById('goNat').href='national.html'+(LANG==='en'?'?lang=en':'');
+  document.getElementById('ttl').innerHTML=t('ttl');
+  document.getElementById('sub').textContent=t('sub');
+  document.getElementById('lStn').textContent=t('lStn');
+  document.getElementById('lBloom').textContent=t('lBloom');
+  document.getElementById('lYear').textContent=t('lYear');
+  document.getElementById('hStrat').textContent=t('hStrat');
+  document.getElementById('hCal').textContent=t('hCal');
+  document.getElementById('hBand').textContent=t('hBand');
+  document.getElementById('foot').textContent=t('foot');
+  document.getElementById('btnKo').classList.toggle('on',LANG==='ko');
+  document.getElementById('btnEn').classList.toggle('on',LANG==='en');
+}
+async function paint(){
+  const d=await yearData(YEAR);
+  const box=document.getElementById('stratTbl');
+  if(!d||!d.stations[STN]||!d.stations[STN].bloom[BLOOM]){
+    box.innerHTML=`<div class="err">${t('noData')}</div>`;
+    document.getElementById('cal').innerHTML='';
+    document.getElementById('ctx').innerHTML='';
+  }else{
+    const st=d.stations[STN], b=st.bloom[BLOOM];
+    document.getElementById('ctx').innerHTML=S[LANG].ctx(st.kcdi,st.kgmi);
+    const order=['BTD_AP','PT_AP','AP','BTD','BT'];
+    const rows=Object.entries(b.strategies).sort((a,z)=>z[1].ipp-a[1].ipp);
+    const bestIpp=rows[0][1].ipp;
+    box.innerHTML=`<table><thead><tr><th>${t('thS')}</th><th>${t('thI')}</th>
+      <th>${t('thG')}</th><th>${t('thW')}</th><th>${t('thA')}</th></tr></thead><tbody>`+
+      rows.map(([k,v])=>`<tr class="${v.ipp===bestIpp?'best':''}">
+        <td><b>${S[LANG].st[k]}</b></td>
+        <td class="ipp">${v.ipp.toLocaleString()}</td>
+        <td><span class="badge" style="background:${GC[v.grade]}">${S[LANG].gr[v.grade]}</span></td>
+        <td>${v.w} g</td>
+        <td style="font-size:12.5px">${S[LANG].act[v.grade]}</td></tr>`).join('')+'</tbody></table>';
+    // 신호등 달력
+    const b0=new Date(`${YEAR}-${BLOOM}T00:00:00`);
+    document.getElementById('cal').innerHTML=b.signals.map((s,i)=>{
+      const dd=new Date(b0);dd.setDate(dd.getDate()+i);
+      return `<div class="c" style="background:${SIGC[s]||'#999'}"
+        title="${S[LANG].sig[s]||s}">${dd.getDate()}</div>`;}).join('');
+    document.getElementById('lgCal').innerHTML=
+      Object.entries(S[LANG].sig).map(([k,v])=>`<span><i style="background:${SIGC[k]}"></i>${v}</span>`).join('');
+  }
+  paintBand();
+}
+async function paintBand(){
+  const el=document.getElementById('band');
+  if(!TREND){try{TREND=await getJSON('trend_kiwi.json');}catch(e){el.innerHTML='';return;}}
+  const s=TREND.stations[STN];
+  const bd=['05-10','05-15','05-20'].includes(BLOOM)?BLOOM:'05-15';
+  if(!s||!s.series[bd]){el.innerHTML='';return;}
+  const ser=s.series[bd];
+  el.innerHTML=Object.keys(ser).sort().map(y=>{
+    const v=ser[y];
+    return `<div class="y"><div class="bx" style="background:${GC[v.BTD]}"
+      title="${y} BTD:${S[LANG].gr[v.BTD]} / best:${S[LANG].st[v.best]}">${v.btd_ipp>=1000?'●':''}</div>
+      <div class="yr">${y.slice(2)}</div></div>`;}).join('');
+  document.getElementById('lgBand').innerHTML=
+    Object.entries(S[LANG].gr).map(([k,v])=>`<span><i style="background:${GC[k]}"></i>${v}</span>`).join('')
+    +`<span>● = IPP≥1,000</span>`;
+}
+(async function boot(){
+  const u=new URL(location);
+  LANG=u.searchParams.get('lang')==='en'?'en':'ko';
+  // 지점 목록: 최신 연도 파일의 belt에서
+  let d=await yearData('2026')||await yearData('2025');
+  const belt=d?d.belt:{'170':'완도'};
+  const ss=document.getElementById('stnSel');
+  ss.innerHTML=Object.entries(belt).map(([id,n])=>`<option value="${id}">${n}</option>`).join('');
+  STN=u.searchParams.get('stn')||'170'; if(![...ss.options].some(o=>o.value===STN))STN='170';
+  ss.value=STN;
+  const bs=document.getElementById('bloomSel');
+  bs.innerHTML=Array.from({length:31},(_,i)=>{const dd=String(i+1).padStart(2,'0');
+    return `<option value="05-${dd}">5/${i+1}</option>`;}).join('');
+  BLOOM=u.searchParams.get('b')||'05-15'; bs.value=BLOOM;
+  const ys=document.getElementById('yearSel');
+  const yopts=[];for(let y=Y1;y>=Y0;y--)yopts.push(`<option value="${y}">${y}</option>`);
+  ys.innerHTML=yopts.join('');
+  YEAR=u.searchParams.get('y')||'2026'; ys.value=YEAR;
+  const sync=()=>{const uu=new URL(location);
+    uu.searchParams.set('stn',STN);uu.searchParams.set('b',BLOOM);uu.searchParams.set('y',YEAR);
+    history.replaceState(null,'',uu);};
+  ss.onchange=()=>{STN=ss.value;sync();paint();};
+  bs.onchange=()=>{BLOOM=bs.value;sync();paint();};
+  ys.onchange=()=>{YEAR=ys.value;sync();paint();};
+  paintStatic();paint();
+})();
+</script>
+</body>
+</html>
