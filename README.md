@@ -5,3 +5,11 @@ Weather-driven pollination decision support for gold kiwifruit 'Haegeum'.
 - `docs/index.html`, `docs/national.html` — 연도별 아카이브 (1차 IPP, 종자 수 기준; 학위논문 2차 심사본의 IPP와 정의가 다름).
 
 판정 규칙의 근거: 학위논문(전북대학교, 2026) 제2장(일 기상 등급, 등급별 방화 빈도·체류 시간)과 제4장(IPP, 검증 하한).
+
+## Python 참조 구현 (`python/kiwi_ipp.py`)
+
+학위논문 제2~4장의 판정 식(일 기상 등급, chill-day 만개일 예측, 개화 기간 유효 방화 E_win, IPP와 3단계 판정)을 표준 라이브러리만으로 구현한 코드입니다. 웹 화면(`docs/advisor.html`)과 같은 식을 씁니다.
+
+```bash
+python python/kiwi_ipp.py --lat 34.3959 --lon 126.7018 --year 2025 --place 완도
+```
