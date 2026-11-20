@@ -27,7 +27,7 @@ import urllib.request
 
 # 등급별 유효 방화(방화 빈도 x 체류 시간, 양호일 = 1)
 E = {"Good": 1.00, "Caution": 0.59, "Alert": 0.38, "Poor": 0.31}
-EV = 0.515  # 검증 하한: BTD 상품과 비율 75% 이상인 해의 최저 E_win(2020년)
+EV = 0.515  # 잠정 기준값: BTD 상품과 비율 75% 이상인 해의 최저 E_win(2020년)
 P85 = {  # 수분 방법별 85 g 이상 과실 비율의 기대값(제4장 Table 4-6)
     "coinc": {"BT": 0.580, "BTD": 0.815, "AP1": 0.648,
               "AP2": 0.920, "BTD_AP": 0.900},  # 수분수 개화 일치
@@ -77,7 +77,7 @@ def to_daily(h):
 
 
 def chill(tx, tn):
-    """하루의 저온 적산(Cd, 음수)과 고온 적산(Ca); 제3장 Table 3-1의 다섯 경우."""
+    """하루의 저온 적산(Cd, 음수)과 고온 적산(Ca); 제3장 Table 3-2의 다섯 경우."""
     tm, rng = (tx + tn) / 2, max(tx - tn, 1e-6)
     a = (tx - TB) ** 2 / (2 * rng)
     b = tx * tx / (2 * rng)
@@ -134,7 +134,17 @@ def ipp(cond, ew, work_days):
     return r
 
 
-def diagnose(daily, full_bloom, pollinizer="both"):
+def coincide(pollinizer="both", hg_first=None, pol_first=None):
+    """1단계 판정: 수분수 한 품종이라도 '해금'과 같은 날 또는 먼저 피기 시작하면 일치.
+    개화 시작일을 모르면 품종 구성으로 추정(both = 일치, 그 밖 = 불일치)."""
+    if pollinizer in ("first", "none"):
+        return False
+    if hg_first and pol_first:
+        return pol_first <= hg_first
+    return pollinizer == "both"
+
+
+def diagnose(daily, full_bloom, pollinizer="both", hg_first=None, pol_first=None):
     """만개 -4 ~ +9일(14일)의 등급으로 E_win과 IPP를 구하고 3단계로 판정한다.
     pollinizer: both('옥천'+'해선') | haeseon('해선'만) | first(고접 첫해) | none"""
     known = []
@@ -148,14 +158,15 @@ def diagnose(daily, full_bloom, pollinizer="both"):
     cnt = {g: sum(x["g"] == g for _, _, x in known) for g in E}
     work = [(d, i) for d, i, x in known
             if x["rain"] < 1 and x["ws"] < 8 and x["tmax"] >= 15]
-    cond = "coinc" if pollinizer == "both" else "non"
+    ok = coincide(pollinizer, hg_first, pol_first)
+    cond = "coinc" if ok else "non"
     val = ipp(cond, ew, len(work))
-    if pollinizer != "both":      # 1단계: 화분 공급
-        step, verdict = 1, "인공수분을 기본으로 하세요(수분수 개화 불일치)"
+    if not ok:                    # 1단계: 화분 공급
+        step, verdict = 1, "관행대로 인공수분을 하세요(수분수 개화 불일치)"
     elif ew < EV:                 # 3단계: 기상 전달
-        step, verdict = 3, "BTD에 인공수분을 더하세요"
+        step, verdict = 3, "인공수분을 계속하면서 BTD를 함께 쓰세요"
     else:                         # 2단계: 방법
-        step, verdict = 2, "BTD만으로 충분합니다"
+        step, verdict = 2, "BTD로 인공수분을 대신할 수 있습니다"
     near = sorted(work, key=lambda x: abs(x[1] - 1))[:3]  # 만개 직후 우선
     return dict(
         full_bloom=full_bloom, n=len(known), E_win=round(ew, 3), grades=cnt,
@@ -171,7 +182,7 @@ def narrative(R, place="과원"):
          f"만개 4일 전~9일 후 {R['n']}일을 진단했습니다.",
          f"등급: 양호 {g['Good']}일, 주의 {g['Caution']}일, "
          f"경계 {g['Alert']}일, 불량 {g['Poor']}일. "
-         f"유효 방화 E_win = {R['E_win']:.2f} (검증 하한 {EV:.2f}).",
+         f"유효 방화 E_win = {R['E_win']:.3f} (잠정 기준값 {EV:.3f}).",
          f"판정(단계 {R['step']}): {R['verdict']}."]
     if I["BTD_AP"] is not None:
         L.append(f"상품과(85 g 이상) 기대율: BTD {I['BTD']:.0%}, "
@@ -225,6 +236,8 @@ def main():
     ap.add_argument("--pollinizer", default="both",
                     choices=["both", "haeseon", "first", "none"])
     ap.add_argument("--full-bloom", help="관측 만개일 YYYY-MM-DD(없으면 예측)")
+    ap.add_argument("--haegeum-first", help="'해금' 개화 시작일 YYYY-MM-DD")
+    ap.add_argument("--pollinizer-first", help="가장 먼저 핀 수분수의 개화 시작일 YYYY-MM-DD")
     ap.add_argument("--place", default="과원")
     a = ap.parse_args()
     past = a.year < dt.date.today().year
@@ -243,7 +256,8 @@ def main():
         hourly = fetch_hourly(a.lat, a.lon, s, e)
     else:
         hourly = fetch_hourly(a.lat, a.lon)
-    R = diagnose(to_daily(hourly), fb, a.pollinizer)
+    d = lambda x: dt.date.fromisoformat(x) if x else None
+    R = diagnose(to_daily(hourly), fb, a.pollinizer, d(a.haegeum_first), d(a.pollinizer_first))
     print(narrative(R, a.place))
 
 
