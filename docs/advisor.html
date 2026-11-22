@@ -106,7 +106,7 @@ const E={Good:1.00,Caution:0.59,Alert:0.38,Poor:0.31};       // 등급별 유효
 const EV=0.515;                                              // 검증 하한: BTD가 성공한 관측 연도의 최저 E_win (2020년)
 const KO={Good:'양호',Caution:'주의',Alert:'경계',Poor:'불량'};
 const GC={Good:'var(--good)',Caution:'var(--caution)',Alert:'var(--alert)',Poor:'var(--poor)'};
-const P85={coinc:{BT:0.580,BTD:0.815,AP1:0.648,AP2:0.920,BTD_AP:0.900},
+const P85={coinc:{BT:0.400,BTD:0.715,AP1:0.548,AP2:0.560,BTD_AP:0.700},
            non:{BT:0.012,BTD:0.150,AP1:0.738,AP2:null,BTD_AP:null}};
 const MNAME={BTD:'꿀벌 + 꽃가루 부착기 (BTD)',BT:'꿀벌 단독 (BT)',AP1:'인공수분 · 냉동 화분 (AP1)',AP2:'인공수분 · 당년 화분 (AP2)',BTD_AP:'BTD + 인공수분 병행'};
 const TB=6.3,RC=102.5,RH=575;                                 // 휴면시계모형 모수 (김광형 등, 2016)
@@ -231,7 +231,7 @@ function render(R,ctx){
   <div class="panel"><h2>유효 방화 (꿀벌이 꽃에 머무는 양, 양호일 = 1)</h2>
    <div class="meter"><div class="th" style="left:${thp}%"><span>검증 하한 0.52</span></div>
     <div class="mk" style="left:${pos}%"><span>${R.ew==null?'-':R.ew.toFixed(2)}</span></div></div>
-   <div class="note">등급별 유효 방화: 양호 1.00 · 주의 0.59 · 경계 0.38 · 불량 0.31 (완도·보성 2018~2025 관측). 2020년(0.52)에도 BTD 상품과 비율 88%.</div></div>
+   <div class="note">등급별 유효 방화: 양호 1.00 · 주의 0.59 · 경계 0.38 · 불량 0.31 (완도·보성 2018~2025 관측). 2020년(0.52)에도 BTD 상품과 비율 68%로 AP1(40%)보다 높음.</div></div>
   <div class="panel"><h2>개화 기간 14일 · 날짜별 기상 등급</h2>
    <div class="cal">${R.win.map(x=>`<div class="c ${x.i===0?'fb':''} ${R.apDays.includes(x.d)&&R.step!==2?'apday':''}" style="background:${x.g?GC[x.g]:'var(--na)'}">
      ${md(x.d)}<small>${x.g?KO[x.g]:'예보 없음'}</small>${x.g?`<small>${x.tmax}° · ${x.rain}mm<br>${x.ws}m/s</small>`:''}</div>`).join('')}</div>
